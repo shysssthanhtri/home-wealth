@@ -4,12 +4,14 @@ import {
   IconBrandGithubFilled,
   IconBrandGoogleFilled,
 } from "@tabler/icons-react";
+import { signIn } from "next-auth/react";
 import { useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { ROUTES } from "@/constants/routes";
 
 const supportSocials = [
   {
@@ -29,10 +31,8 @@ export const SocialLogin = () => {
 
   const onLogin = async (provider: "github" | "google") => {
     startAuthenticating(async () => {
-      await new Promise<void>((res) => {
-        setTimeout(() => {
-          res();
-        }, 2000);
+      await signIn(provider, {
+        callbackUrl: ROUTES.HOME,
       });
     });
   };

@@ -12,6 +12,7 @@
     "commitlint": "commitlint --edit"
   },
   "dependencies": {
+    "@auth/mongodb-adapter": "^3.11.1",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
@@ -19,7 +20,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.561.0",
+    "mongodb": "^7.0.0",
     "next": "16.0.10",
+    "next-auth": "5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "react": "19.2.1",
     "react-dom": "19.2.1",
