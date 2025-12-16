@@ -41,7 +41,7 @@ export const SocialLogin = () => {
     <FieldGroup>
       {isAuthenticating && (
         <Field>
-          <Badge variant="outline">
+          <Badge variant="outline" className="py-2">
             <Spinner />
             Log you in...
           </Badge>

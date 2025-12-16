@@ -12,6 +12,10 @@ export default auth(async (request) => {
   if (isSignedIn && authRoutes.some((route) => path.startsWith(route))) {
     return NextResponse.redirect(new URL(ROUTES.HOME, request.url));
   }
+
+  if (!isSignedIn && !path.startsWith(ROUTES.LOGIN)) {
+    return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
+  }
 });
 
 // Optionally, don't invoke Middleware on some paths
