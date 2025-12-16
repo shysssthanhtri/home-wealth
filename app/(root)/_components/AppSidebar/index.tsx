@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import React from "react";
 
+import { HomeSwitcher } from "@/app/(root)/_components/HomeSwitcher";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +26,9 @@ export const AppSidebar = ({
 }: React.ComponentProps<typeof Sidebar>) => {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>Header</SidebarHeader>
+      <SidebarHeader>
+        <HomeSwitcher homes={data.teams} />
+      </SidebarHeader>
       <SidebarContent>Content</SidebarContent>
       <SidebarFooter>Footer</SidebarFooter>
       <SidebarRail />
