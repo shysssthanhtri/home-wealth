@@ -17,7 +17,9 @@ import {
   NavPersonalItems,
 } from "@/app/(root)/_components/AppSidebar/nav-items";
 import { NavGroup } from "@/app/(root)/_components/AppSidebar/NavGroup";
+import { NavUser } from "@/app/(root)/_components/AppSidebar/NavUser";
 import { HomeSwitcher } from "@/app/(root)/_components/HomeSwitcher";
+import { auth } from "@/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -26,9 +28,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-export const AppSidebar = ({
+export const AppSidebar = async ({
   ...props
 }: React.ComponentProps<typeof Sidebar>) => {
+  const session = await auth();
+  const user = session?.user;
+  if (!user) return null;
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -38,7 +44,15 @@ export const AppSidebar = ({
         <NavGroup label={data.teams[0].name} items={NavHomeItems} />
         <NavGroup label="Personal" items={NavPersonalItems} />
       </SidebarContent>
-      <SidebarFooter>Footer</SidebarFooter>
+      <SidebarFooter>
+        <NavUser
+          user={{
+            email: user.email ?? "",
+            name: user.name ?? "",
+            avatar: user.image ?? "",
+          }}
+        />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
