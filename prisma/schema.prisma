@@ -22,9 +22,27 @@ model accounts {
 }
 
 model users {
-  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
   email         String
   emailVerified Boolean?
   image         String
   name          String
+
+  homesUsers homes_users[]
+}
+
+model homes {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+
+  homesUsers homes_users[]
+}
+
+model homes_users {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  homeId String @db.ObjectId
+
+  user users @relation(fields: [userId], references: [id])
+  home homes @relation(fields: [homeId], references: [id])
 }

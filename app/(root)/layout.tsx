@@ -1,28 +1,25 @@
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import React from "react";
 
-import { AppSidebar } from "@/app/(root)/_components/AppSidebar";
-import { AppSiteHeader } from "@/app/(root)/_components/AppSiteHeader";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { getCurrentUser } from "@/auth";
+import { ROUTES } from "@/constants/routes";
+import { prisma } from "@/lib/prisma";
 
 interface Props {
   children: React.ReactNode;
 }
 const RootLayout = async ({ children }: Props) => {
-  const cookieStore = await cookies();
-  const isSidebarOpen =
-    !cookieStore.get("sidebar_state") ||
-    cookieStore.get("sidebar_state")?.value === "true";
+  const user = await getCurrentUser();
+  const relation = await prisma.homes_users.findFirst({
+    where: {
+      userId: user.id,
+    },
+  });
+  if (!relation) {
+    redirect(ROUTES.HOMELESS);
+  }
 
-  return (
-    <SidebarProvider defaultOpen={isSidebarOpen}>
-      <AppSidebar />
-      <main className="w-full">
-        <AppSiteHeader />
-        <SidebarInset>{children}</SidebarInset>
-      </main>
-    </SidebarProvider>
-  );
+  return <>{children}</>;
 };
 
 export default RootLayout;
