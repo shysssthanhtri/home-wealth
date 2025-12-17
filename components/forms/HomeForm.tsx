@@ -67,7 +67,7 @@ export const HomeForm = forwardRef<HomeFormRef, Props>(
                 <Input
                   {...field}
                   aria-invalid={fieldState.invalid}
-                  placeholder="Login button not working on mobile"
+                  placeholder="Name"
                   autoComplete="off"
                   disabled={isLoading}
                 />

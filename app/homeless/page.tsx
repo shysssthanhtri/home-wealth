@@ -1,7 +1,9 @@
 "use client";
 
+import { redirect } from "next/navigation";
 import { useRef, useTransition } from "react";
 
+import { createHome } from "@/actions/home-actions";
 import { HomeForm, HomeFormRef } from "@/components/forms/HomeForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { ROUTES } from "@/constants/routes";
 
 const HomelessPage = () => {
   const [isProcessing, start] = useTransition();
@@ -19,12 +22,9 @@ const HomelessPage = () => {
 
   const onSubmit = (home: { name: string }) => {
     start(async () => {
-      await new Promise<void>((res) => {
-        setTimeout(() => {
-          res();
-        }, 2000);
-      });
-      console.log("home: ", home);
+      const createdHome = await createHome(home);
+      console.log("createdHome: ", createdHome);
+      redirect(ROUTES.DASHBOARD);
     });
   };
 

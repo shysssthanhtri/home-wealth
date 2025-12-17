@@ -13,6 +13,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: "jwt",
   },
+  callbacks: {
+    session: ({ session, token }) => {
+      session.user.id = token.sub ?? "";
+      return session;
+    },
+  },
 });
 
 export const getCurrentUser = async () => {
@@ -22,4 +28,13 @@ export const getCurrentUser = async () => {
     return redirect(ROUTES.LOGIN);
   }
   return user;
+};
+
+export const getCurrentUserId = async () => {
+  const session = await auth();
+  const user = session?.user;
+  if (!user || !user.id) {
+    return redirect(ROUTES.LOGIN);
+  }
+  return user.id;
 };
