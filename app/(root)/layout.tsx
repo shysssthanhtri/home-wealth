@@ -3,7 +3,7 @@ import React from "react";
 
 import { AppSidebar } from "@/app/(root)/_components/AppSidebar";
 import { AppSiteHeader } from "@/app/(root)/_components/AppSiteHeader";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 interface Props {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ const RootLayout = async ({ children }: Props) => {
       <AppSidebar />
       <main className="w-full">
         <AppSiteHeader />
-        {children}
+        <SidebarInset>{children}</SidebarInset>
       </main>
     </SidebarProvider>
   );
