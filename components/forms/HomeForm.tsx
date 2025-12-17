@@ -1,5 +1,86 @@
-import React from "react";
+"use client";
 
-export const HomeForm = () => {
-  return <div>HomeForm</div>;
+import { zodResolver } from "@hookform/resolvers/zod";
+import React, { forwardRef, useCallback, useImperativeHandle } from "react";
+import { Controller, useForm } from "react-hook-form";
+import z from "zod";
+
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { homesSchema } from "@/schemas";
+
+const HomeFormSchema = homesSchema.pick({
+  name: true,
+});
+type FormSchema = z.infer<typeof HomeFormSchema>;
+
+interface Props {
+  home?: z.infer<typeof HomeFormSchema>;
+  onSubmit?: (value: FormSchema) => void;
+  isLoading?: boolean;
+}
+export type HomeFormRef = {
+  submit: () => void;
 };
+
+export const HomeForm = forwardRef<HomeFormRef, Props>(
+  ({ onSubmit, isLoading, home }, ref) => {
+    const form = useForm<FormSchema>({
+      resolver: zodResolver(HomeFormSchema),
+      defaultValues: {
+        name: "",
+        ...home,
+      },
+    });
+
+    const handleSubmit = useCallback(
+      (value: FormSchema) => {
+        onSubmit?.(value);
+      },
+      [onSubmit],
+    );
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        submit: () => {
+          void form.handleSubmit(handleSubmit)();
+        },
+      }),
+      [form, handleSubmit],
+    );
+
+    return (
+      <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <FieldGroup>
+          <Controller
+            name="name"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel>Home name</FieldLabel>
+                <Input
+                  {...field}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Login button not working on mobile"
+                  autoComplete="off"
+                  disabled={isLoading}
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        </FieldGroup>
+      </form>
+    );
+  },
+);
+
+HomeForm.displayName = "HomeForm";
