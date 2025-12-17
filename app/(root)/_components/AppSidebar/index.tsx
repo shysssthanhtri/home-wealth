@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import React from "react";
 
+import {
+  NavHomeItems,
+  NavPersonalItems,
+} from "@/app/(root)/_components/AppSidebar/nav-items";
+import { NavGroup } from "@/app/(root)/_components/AppSidebar/NavGroup";
 import { HomeSwitcher } from "@/app/(root)/_components/HomeSwitcher";
 import {
   Sidebar,
@@ -29,7 +34,10 @@ export const AppSidebar = ({
       <SidebarHeader>
         <HomeSwitcher homes={data.teams} />
       </SidebarHeader>
-      <SidebarContent>Content</SidebarContent>
+      <SidebarContent>
+        <NavGroup label={data.teams[0].name} items={NavHomeItems} />
+        <NavGroup label="Personal" items={NavPersonalItems} />
+      </SidebarContent>
       <SidebarFooter>Footer</SidebarFooter>
       <SidebarRail />
     </Sidebar>
