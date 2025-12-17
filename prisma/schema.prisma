@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model accounts {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  access_token      String
+  expires_at        Int
+  id_token          String
+  provider          String
+  providerAccountId String
+  scope             String
+  token_type        String
+  type              String
+  userId            String @db.ObjectId
+}
+
+model users {
+  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  email         String
+  emailVerified Boolean?
+  image         String
+  name          String
+}
