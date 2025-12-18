@@ -24,7 +24,7 @@ const HomelessPage = () => {
     start(async () => {
       const createdHome = await createHome(home);
       console.log("createdHome: ", createdHome);
-      redirect(ROUTES.DASHBOARD);
+      redirect(ROUTES.HOME);
     });
   };
 

@@ -7,7 +7,13 @@ import Google from "next-auth/providers/google";
 import { ROUTES } from "@/constants/routes";
 import { mongoClient } from "@/lib/mongo";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const {
+  handlers,
+  auth,
+  signIn,
+  signOut,
+  unstable_update: update,
+} = NextAuth({
   adapter: MongoDBAdapter(mongoClient),
   providers: [GitHub, Google],
   session: {
@@ -16,7 +22,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     session: ({ session, token }) => {
       session.user.id = token.sub ?? "";
+      session.user.homeId = token.homeId;
       return session;
+    },
+    jwt: ({ token, trigger, session }) => {
+      if (trigger === "update") {
+        token.homeId = session?.user?.homeId;
+      }
+      return token;
     },
   },
 });

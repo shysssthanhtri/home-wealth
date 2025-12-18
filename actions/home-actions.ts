@@ -2,7 +2,7 @@
 
 import z from "zod";
 
-import { getCurrentUserId } from "@/auth";
+import { getCurrentUserId, update } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { homesSchema } from "@/schemas";
 
@@ -25,4 +25,8 @@ export const createHome = async (
   console.log("createdHome: ", createdHome);
 
   return createdHome;
+};
+
+export const loginHome = async (homeId: z.infer<typeof homesSchema>["id"]) => {
+  await update({ user: { homeId } });
 };
