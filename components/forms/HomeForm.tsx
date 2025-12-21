@@ -63,13 +63,14 @@ export const HomeForm = forwardRef<HomeFormRef, Props>(
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel>Home name</FieldLabel>
+                <FieldLabel htmlFor="name">Home name</FieldLabel>
                 <Input
                   {...field}
                   aria-invalid={fieldState.invalid}
                   placeholder="Name"
                   autoComplete="off"
                   disabled={isLoading}
+                  id="name"
                 />
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />

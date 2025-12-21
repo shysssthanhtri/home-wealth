@@ -22,7 +22,7 @@ export const createHome = async (
     },
   });
 
-  console.log("createdHome: ", createdHome);
+  await loginHome(createdHome.id);
 
   return createdHome;
 };

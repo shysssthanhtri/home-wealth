@@ -8,5 +8,5 @@ export const ROUTES = {
   MEMBERS: "/members",
   HOMES: "/homes",
   PERSONAL_SETTING: "/personal-setting",
-  HOMELESS: "/homeless",
+  COMING_HOME: "/coming-home",
 } as const;

@@ -16,7 +16,7 @@ const RootLayout = async ({ children }: Props) => {
     },
   });
   if (!relation) {
-    redirect(ROUTES.HOMELESS);
+    redirect(ROUTES.COMING_HOME);
   }
 
   return <>{children}</>;
