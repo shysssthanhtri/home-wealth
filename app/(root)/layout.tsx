@@ -33,7 +33,7 @@ const RootLayout = async ({ children }: Props) => {
       <AppSidebar />
       <main className="w-full">
         <AppSiteHeader />
-        <SidebarInset className="bg-zinc-50 dark:bg-black min-h-[calc(100vh-var(--spacing)*16)] transition-[width,height] group-has-data-[collapsible=icon]/sidebar-wrapper:min-h-[calc(100vh-var(--spacing)*12)]">
+        <SidebarInset className="bg-zinc-50 dark:bg-black min-h-[calc(100vh-var(--spacing)*16)] transition-[width,height] group-has-data-[collapsible=icon]/sidebar-wrapper:min-h-[calc(100vh-var(--spacing)*12)] p-4">
           {children}
         </SidebarInset>
       </main>

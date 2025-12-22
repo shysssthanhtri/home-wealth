@@ -1,12 +1,10 @@
-import Link from "next/link";
 import React from "react";
 
+import { NavLink } from "@/app/(root)/_components/AppSidebar/NavLink";
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
 interface Props {
@@ -19,14 +17,12 @@ export const NavGroup = ({ label, items }: Props) => {
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
-          <SidebarMenuItem key={item.label}>
-            <SidebarMenuButton asChild>
-              <Link href={item.href}>
-                <item.icon />
-                {item.label}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <NavLink
+            key={item.label}
+            label={item.label}
+            href={item.href}
+            icon={<item.icon />}
+          />
         ))}
       </SidebarMenu>
     </SidebarGroup>
