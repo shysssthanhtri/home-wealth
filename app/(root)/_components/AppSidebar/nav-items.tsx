@@ -14,7 +14,7 @@ export const NavHomeItems = [
   {
     label: "Dashboard",
     icon: IconDashboard,
-    href: ROUTES.DASHBOARD,
+    href: ROUTES.HOME,
   },
   {
     label: "Expenses",
