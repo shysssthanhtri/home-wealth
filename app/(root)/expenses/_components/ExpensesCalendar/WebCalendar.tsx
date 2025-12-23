@@ -1,7 +1,26 @@
+"use client";
+
 import React from "react";
 
-type Props = React.HTMLAttributes<HTMLDivElement>;
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
-export const WebCalendar = (props: Props) => {
-  return <div {...props}>WebCalendar</div>;
+interface Props {
+  className?: string;
+}
+
+export const WebCalendar = ({ className }: Props) => {
+  const [date, setDate] = React.useState(new Date());
+
+  return (
+    <Calendar
+      mode="single"
+      selected={date}
+      onSelect={(date) => {
+        setDate(date);
+      }}
+      className={cn("bg-transparent p-0", className)}
+      required
+    />
+  );
 };

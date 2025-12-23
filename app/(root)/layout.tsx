@@ -5,6 +5,7 @@ import React from "react";
 import { AppSidebar } from "@/app/(root)/_components/AppSidebar";
 import { AppSiteHeader } from "@/app/(root)/_components/AppSiteHeader";
 import { getCurrentUserId } from "@/auth";
+import { Card, CardContent } from "@/components/ui/card";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ROUTES } from "@/constants/routes";
 import { prisma } from "@/lib/prisma";
@@ -34,7 +35,9 @@ const RootLayout = async ({ children }: Props) => {
       <main className="w-full">
         <AppSiteHeader />
         <SidebarInset className="bg-zinc-50 dark:bg-black min-h-[calc(100vh-var(--spacing)*16)] transition-[width,height] group-has-data-[collapsible=icon]/sidebar-wrapper:min-h-[calc(100vh-var(--spacing)*12)] p-4">
-          {children}
+          <Card>
+            <CardContent>{children}</CardContent>
+          </Card>
         </SidebarInset>
       </main>
     </SidebarProvider>
