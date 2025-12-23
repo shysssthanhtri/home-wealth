@@ -1,6 +1,6 @@
-import * as z from "zod";
-
-import { Completehomes_users, Relatedhomes_usersSchema } from "./index";
+import * as z from "zod"
+import * as imports from "../prisma/null"
+import { Completehomes_users, Relatedhomes_usersSchema, Completeexpenses, RelatedexpensesSchema } from "./index"
 
 export const usersSchema = z.object({
   id: z.string(),
@@ -8,10 +8,11 @@ export const usersSchema = z.object({
   emailVerified: z.boolean().nullish(),
   image: z.string(),
   name: z.string(),
-});
+})
 
 export interface Completeusers extends z.infer<typeof usersSchema> {
-  homesUsers: Completehomes_users[];
+  homesUsers: Completehomes_users[]
+  expenses: Completeexpenses[]
 }
 
 /**
@@ -19,8 +20,7 @@ export interface Completeusers extends z.infer<typeof usersSchema> {
  *
  * NOTE: Lazy required in case of potential circular dependencies within schema
  */
-export const RelatedusersSchema: z.ZodSchema<Completeusers> = z.lazy(() =>
-  usersSchema.extend({
-    homesUsers: Relatedhomes_usersSchema.array(),
-  }),
-);
+export const RelatedusersSchema: z.ZodSchema<Completeusers> = z.lazy(() => usersSchema.extend({
+  homesUsers: Relatedhomes_usersSchema.array(),
+  expenses: RelatedexpensesSchema.array(),
+}))

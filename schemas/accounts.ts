@@ -1,4 +1,5 @@
-import * as z from "zod";
+import * as z from "zod"
+import * as imports from "../prisma/null"
 
 export const accountsSchema = z.object({
   id: z.string(),
@@ -11,4 +12,4 @@ export const accountsSchema = z.object({
   token_type: z.string(),
   type: z.string(),
   userId: z.string(),
-});
+})
