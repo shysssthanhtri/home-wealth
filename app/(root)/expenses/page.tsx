@@ -6,7 +6,7 @@ const ExpensesPage = () => {
   return (
     <div className="flex gap-4">
       <ExpensesCalendar />
-      <div>
+      <div className="w-full flex flex-col gap-4">
         <AddExpense />
         <ExpenseList />
       </div>

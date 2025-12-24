@@ -72,10 +72,16 @@ model homes_users {
   home homes @relation(fields: [homeId], references: [id])
 }
 
+enum ExpenseType {
+  EXPENSE
+  INCOME
+}
+
 model expenses {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  userId String @db.ObjectId
-  homeId String @db.ObjectId
+  id     String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId String      @db.ObjectId
+  homeId String      @db.ObjectId
+  type   ExpenseType
 
   amount      Int
   description String?

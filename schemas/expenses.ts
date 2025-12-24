@@ -1,11 +1,13 @@
 import * as z from "zod"
 import * as imports from "../prisma/null"
+import { ExpenseType } from "../generated/prisma"
 import { Completeusers, RelatedusersSchema, Completehomes, RelatedhomesSchema } from "./index"
 
 export const expensesSchema = z.object({
   id: z.string(),
   userId: z.string(),
   homeId: z.string(),
+  type: z.nativeEnum(ExpenseType),
   amount: z.number().int(),
   description: z.string().nullish(),
   date: z.date(),
