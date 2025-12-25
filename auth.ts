@@ -51,3 +51,15 @@ export const getCurrentUserId = async () => {
   }
   return user.id;
 };
+
+export const getCurrentUserIdAndHomeId = async () => {
+  const session = await auth();
+  const user = session?.user;
+  if (!user || !user.id || !user.homeId) {
+    return redirect(ROUTES.LOGIN);
+  }
+  return {
+    userId: user.id,
+    homeId: user.homeId,
+  };
+};

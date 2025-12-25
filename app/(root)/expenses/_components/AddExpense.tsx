@@ -2,6 +2,7 @@
 
 import { useRef, useTransition } from "react";
 
+import { createExpense } from "@/actions/expense-actions";
 import {
   ExpenseForm,
   ExpenseFormRef,
@@ -23,11 +24,9 @@ export const AddExpense = () => {
 
   const onSubmit = (expense: ExpenseFormValue) => {
     start(async () => {
-      console.log("expense: ", expense);
-      await new Promise<void>((res) => {
-        setTimeout(() => {
-          res();
-        }, 2000);
+      await createExpense({
+        ...expense,
+        date: new Date(),
       });
       ref.current?.reset({ type: expense.type });
     });
