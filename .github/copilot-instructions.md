@@ -10,6 +10,8 @@ This is a personal finance management application built with Next.js 16, React 1
 - **Runtime**: React 19.2.3
 - **Language**: TypeScript 5
 - **Styling**: Tailwind CSS v4
+- **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
+- **Icons**: Lucide React
 - **Package Manager**: pnpm
 
 ## Project Structure
@@ -22,13 +24,19 @@ home-wealth/
 │   ├── globals.css          # Global styles and Tailwind directives
 │   └── fonts/               # Local font configurations
 │       └── index.ts         # Geist Sans & Geist Mono font exports
+├── components/              # React components
+│   └── ui/                 # shadcn/ui components (auto-generated)
+├── lib/                     # Utility functions
+│   └── utils.ts            # cn() helper for class merging
 ├── .github/                 # GitHub configurations
 │   └── copilot-instructions.md
 ├── .husky/                  # Git hooks
 │   ├── pre-commit          # Runs lint-staged
 │   └── commit-msg          # Runs commitlint
 ├── public/                  # Static assets
-├── *.config.*              # Configuration files
+├── components.json         # shadcn/ui configuration
+├── tailwind.config.ts      # Tailwind CSS configuration
+├── *.config.*              # Other configuration files
 └── package.json            # Dependencies and scripts
 ```
 
