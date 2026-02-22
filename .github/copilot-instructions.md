@@ -13,7 +13,7 @@ This is a personal finance management application built with Next.js 16, React 1
 - **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
 - **Icons**: Lucide React
 - **Database**: MongoDB Atlas
-- **ODM**: Mongoose
+- **ORM**: Prisma (v6)
 - **Authentication**: Auth.js (NextAuth.js v5) with Credentials + Google OAuth
 - **Package Manager**: pnpm
 
@@ -32,9 +32,10 @@ home-wealth/
 │   └── ui/                 # shadcn/ui components (auto-generated)
 ├── lib/                     # Utility functions
 │   ├── utils.ts            # cn() helper for class merging
-│   ├── db.ts               # MongoDB native client (for Auth.js adapter)
-│   └── mongoose.ts         # Mongoose connection helper
-├── models/                  # Mongoose models
+│   └── prisma.ts           # Prisma Client singleton (HMR-safe)
+├── prisma/                  # Prisma schema and seed
+│   └── schema.prisma       # All models (Auth.js + app)
+├── generated/prisma/        # Auto-generated Prisma Client (gitignored)
 ├── types/                   # Shared TypeScript types
 ├── .github/                 # GitHub configurations
 │   └── copilot-instructions.md

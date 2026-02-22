@@ -22,7 +22,7 @@ A full-featured family money tracking web application. Family members can input 
 | Icons           | Lucide React                                   |
 | Database        | MongoDB Atlas                                  |
 | Authentication  | Auth.js (NextAuth.js v5)                       |
-| ODM             | Mongoose                                       |
+| ORM             | Prisma (v6)                                    |
 | Charts          | Recharts (via shadcn/ui Chart)                 |
 | Package Manager | pnpm                                           |
 
@@ -31,118 +31,181 @@ A full-featured family money tracking web application. Family members can input 
 ## Architecture Decisions
 
 - **MongoDB Atlas**: Managed NoSQL database with low latency, flexible schema, and a generous free tier — ideal for a family app deployed on Vercel.
-- **Auth.js (NextAuth.js v5)**: Supports multiple authentication strategies (Credentials + Google OAuth) with a dedicated MongoDB adapter. Handles session management, CSRF protection, and JWT out of the box.
-- **Mongoose ODM**: Provides schema validation, middleware hooks, and type-safe queries for MongoDB — better DX than raw MongoDB driver for application data.
+- **Auth.js (NextAuth.js v5)**: Supports multiple authentication strategies (Credentials + Google OAuth) with the Prisma adapter (`@auth/prisma-adapter`). Handles session management, CSRF protection, and JWT out of the box.
+- **Prisma ORM (v6)**: Type-safe database client with auto-generated types from the schema, intuitive query API, and first-class MongoDB support. Single data layer for both Auth.js and application data.
 - **Route groups `(auth)` and `(app)`**: Separate layouts for authenticated/unauthenticated pages without affecting URL paths.
 - **Server Actions over API Routes**: Next.js 16 pattern for mutations — simpler, type-safe, and SSR-friendly.
 - **Server Components by default**: All pages fetch data server-side; only interactive elements (forms, dialogs, charts) use `"use client"`.
 - **shadcn Chart (Recharts)**: Already supported by shadcn/ui with theme integration — no extra charting library needed.
-- **Two MongoDB connections**: Auth.js uses the native `mongodb` driver (via `@auth/mongodb-adapter`) for session/user data; application data uses Mongoose for schema validation and richer queries.
+- **Single Prisma connection**: Both Auth.js (via `@auth/prisma-adapter`) and application data share the same Prisma Client instance — simpler architecture, one schema file, fully type-safe.
 
 ---
 
-## Database Schema
+## Database Schema (Prisma)
 
-### Auth Collections (managed by Auth.js MongoDB Adapter)
+All models are defined in `prisma/schema.prisma`. Prisma generates the TypeScript client and types automatically via `prisma generate`.
 
-Auth.js automatically creates and manages these collections:
+### Prisma Schema
 
-- **`users`** — User accounts (id, name, email, emailVerified, image)
-- **`accounts`** — OAuth accounts linked to users (provider, providerAccountId, etc.)
-- **`sessions`** — Active sessions (sessionToken, userId, expires)
-- **`verification_tokens`** — Email verification tokens
+```prisma
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
 
-> These collections are fully managed by `@auth/mongodb-adapter`. Do not modify their schema directly.
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
 
-### Application Collections (managed by Mongoose)
+// ─── Auth.js Models (managed by @auth/prisma-adapter) ───
 
-#### `families`
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // Hashed password for Credentials provider
+  accounts      Account[]
+  sessions      Session[]
+  members       FamilyMember[]
+}
 
-```typescript
-{
-  _id: ObjectId,
-  name: string,              // Family name
-  createdAt: Date,           // Auto-managed by Mongoose timestamps
-  updatedAt: Date
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Application Models ───
+
+model Family {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      FamilyMember[]
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model FamilyMember {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId    String   @db.ObjectId
+  userId      String   @db.ObjectId
+  role        String   // 'admin' | 'member'
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([familyId, userId])
+}
+
+model Category {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId  String   @db.ObjectId
+  name      String
+  type      String   // 'income' | 'expense'
+  icon      String   // Lucide icon name
+  color     String   // Hex color for charts
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@index([familyId, type])
+}
+
+model Transaction {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId    String   @db.ObjectId
+  memberId    String   @db.ObjectId
+  categoryId  String   @db.ObjectId
+  type        String   // 'income' | 'expense'
+  amount      Float    // Always positive
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family   Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  member   FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, date(sort: Desc)])
+  @@index([familyId, categoryId])
+  @@index([familyId, memberId])
+}
+
+model Budget {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId   String   @db.ObjectId
+  categoryId String   @db.ObjectId
+  amount     Float
+  month      DateTime // First day of the month
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  family   Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, categoryId, month])
+  @@index([familyId, month])
 }
 ```
 
-#### `family_members`
+### Schema Workflow
 
-```typescript
-{
-  _id: ObjectId,
-  familyId: ObjectId,        // Ref → families
-  userId: ObjectId,          // Ref → users (Auth.js)
-  role: 'admin' | 'member',
-  displayName: string,       // Shown in the app
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-**Indexes**: `{ familyId: 1, userId: 1 }` (unique compound)
-
-#### `categories`
-
-```typescript
-{
-  _id: ObjectId,
-  familyId: ObjectId,        // Ref → families
-  name: string,              // e.g., "Food", "Salary"
-  type: 'income' | 'expense',
-  icon: string,              // Lucide icon name
-  color: string,             // Hex color for charts
-  isDefault: boolean,        // Seed categories
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-**Indexes**: `{ familyId: 1, type: 1 }`
-
-#### `transactions`
-
-```typescript
-{
-  _id: ObjectId,
-  familyId: ObjectId,        // Ref → families
-  memberId: ObjectId,        // Ref → family_members
-  categoryId: ObjectId,      // Ref → categories
-  type: 'income' | 'expense',
-  amount: number,            // Always positive (Decimal128 for precision)
-  description?: string,      // Optional note
-  date: Date,                // Transaction date
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-**Indexes**: `{ familyId: 1, date: -1 }`, `{ familyId: 1, categoryId: 1 }`, `{ familyId: 1, memberId: 1 }`
-
-#### `budgets`
-
-```typescript
-{
-  _id: ObjectId,
-  familyId: ObjectId,        // Ref → families
-  categoryId: ObjectId,      // Ref → categories
-  amount: number,            // Budget limit
-  month: Date,               // First day of the month
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-**Indexes**: `{ familyId: 1, month: 1 }`, `{ familyId: 1, categoryId: 1, month: 1 }` (unique compound)
+- **Push schema to MongoDB**: `pnpm prisma db push` (no migration files for MongoDB)
+- **Generate client**: `pnpm prisma generate` (auto-runs after `db push`)
+- **Seed data**: `pnpm prisma db seed` (configured in `package.json`)
 
 ### Data Access Security
 
 Since MongoDB does not have Row Level Security (RLS) like PostgreSQL, data isolation is enforced at the **application layer**:
 
-- All queries include the user's `familyId` filter derived from their authenticated session.
+- All Prisma queries include the user's `familyId` filter derived from their authenticated session.
 - Server Actions validate that the current user belongs to the target family before any read/write.
-- Mongoose middleware can enforce `familyId` scoping on queries automatically.
+- A shared `getSessionFamily()` helper extracts the family context from the Auth.js session.
 - Admin vs. member role checks are performed in Server Actions for destructive operations.
 
 ---
@@ -203,14 +266,12 @@ home-wealth/
 │       └── invite-form.tsx
 ├── lib/
 │   ├── utils.ts                   # cn() helper
-│   ├── db.ts                      # MongoDB native client (for Auth.js adapter)
-│   └── mongoose.ts                # Mongoose connection helper
-├── models/                        # Mongoose models
-│   ├── family.ts
-│   ├── family-member.ts
-│   ├── category.ts
-│   ├── transaction.ts
-│   └── budget.ts
+│   └── prisma.ts                  # Prisma Client singleton (HMR-safe)
+├── prisma/
+│   ├── schema.prisma              # Prisma schema (all models)
+│   └── seed.ts                    # Database seed script
+├── generated/
+│   └── prisma/                    # Auto-generated Prisma Client (gitignored)
 ├── types/
 │   └── index.ts                   # Shared TypeScript types
 ├── hooks/                         # Custom React hooks
@@ -226,16 +287,18 @@ home-wealth/
 
 ## Implementation Phases
 
-### Phase 1: MongoDB & Auth.js Setup
+### Phase 1: Prisma, MongoDB & Auth.js Setup
 
-- [ ] Install `mongodb`, `mongoose`, `next-auth@beta`, `@auth/mongodb-adapter`
-- [ ] Create MongoDB native client (`lib/db.ts`) for Auth.js adapter (with HMR-safe global caching)
-- [ ] Create Mongoose connection helper (`lib/mongoose.ts`) for application data
-- [ ] Create Auth.js config (`auth.ts`) with MongoDB adapter, Credentials provider, and Google provider
+- [ ] Install `prisma@6` (dev), `@prisma/client@6`, `next-auth@beta`, `@auth/prisma-adapter`
+- [ ] Initialize Prisma: `pnpm prisma init --datasource-provider mongodb --output ../generated/prisma`
+- [ ] Define all models in `prisma/schema.prisma` (Auth.js + application models)
+- [ ] Create Prisma Client singleton (`lib/prisma.ts`) with HMR-safe global caching
+- [ ] Push schema to MongoDB: `pnpm prisma db push`
+- [ ] Create Auth.js config (`auth.ts`) with Prisma adapter, Credentials provider, and Google provider
 - [ ] Create Auth.js route handler (`app/api/auth/[...nextauth]/route.ts`)
 - [ ] Create Next.js 16 proxy file (`proxy.ts`) for session middleware
-- [ ] Create `.env.local.example` with required env vars (`MONGODB_URI`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); update `.gitignore`
-- [ ] Create Mongoose models in `models/` directory
+- [ ] Create `.env.local.example` with required env vars (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); update `.gitignore`
+- [ ] Add `generated/` to `.gitignore`
 - [ ] Create shared TypeScript types in `types/index.ts`
 
 ### Phase 2: Authentication
@@ -275,7 +338,7 @@ home-wealth/
 - [ ] Build categories page (grid/list view)
 - [ ] Build category form dialog (name, type, icon, color)
 - [ ] Create category Server Actions (CRUD)
-- [ ] Write seed script for default categories (`scripts/seed.ts`)
+- [ ] Write Prisma seed script for default categories (`prisma/seed.ts`)
 
 ### Phase 7: Family Members Management
 
