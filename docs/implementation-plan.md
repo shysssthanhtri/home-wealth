@@ -2,11 +2,13 @@
 
 ## Overview
 
-A full-featured family money tracking web application. Family members can input their income and expenses to keep track of the family balance. Built with Next.js 16 (SSR), MongoDB Atlas (DB), Auth.js (Authentication), and shadcn/ui.
+A full-featured family money tracking web application. Family members can input their income and expenses to keep track of the family balance. Built with Next.js 16 (SSR), MongoDB (DB), Auth.js (Authentication), and shadcn/ui.
 
 **Target Users**: Families who want to collaboratively track finances.
 
 **Deployment**: Vercel
+
+**Status**: Phase 1 & 2 completed on `main`.
 
 ---
 
@@ -20,7 +22,7 @@ A full-featured family money tracking web application. Family members can input 
 | Styling         | Tailwind CSS v4                                |
 | UI Components   | shadcn/ui (Radix UI + Tailwind CSS)            |
 | Icons           | Lucide React                                   |
-| Database        | MongoDB Atlas                                  |
+| Database        | MongoDB (Docker local / Atlas production)       |
 | Authentication  | Auth.js (NextAuth.js v5)                       |
 | ORM             | Prisma (v6)                                    |
 | Charts          | Recharts (via shadcn/ui Chart)                 |
@@ -30,9 +32,9 @@ A full-featured family money tracking web application. Family members can input 
 
 ## Architecture Decisions
 
-- **MongoDB Atlas**: Managed NoSQL database with low latency, flexible schema, and a generous free tier — ideal for a family app deployed on Vercel.
-- **Auth.js (NextAuth.js v5)**: Supports multiple authentication strategies (Credentials + Google OAuth) with the Prisma adapter (`@auth/prisma-adapter`). Handles session management, CSRF protection, and JWT out of the box.
-- **Prisma ORM (v6)**: Type-safe database client with auto-generated types from the schema, intuitive query API, and first-class MongoDB support. Single data layer for both Auth.js and application data.
+- **MongoDB**: Flexible NoSQL database. Local development uses Docker (`mongo:7` replica set on port 27018); production targets MongoDB Atlas for managed hosting on Vercel.
+- **Auth.js (NextAuth.js v5)**: Supports Credentials provider (email/password with bcrypt). Handles session management, CSRF protection, and JWT out of the box. Route protection via `authorized` callback in the Next.js 16 proxy.
+- **Prisma ORM (v6)**: Type-safe database client with auto-generated types from the schema, intuitive query API, and first-class MongoDB support. Single data layer for both Auth.js and application data. Requires MongoDB replica set for transaction support.
 - **Route groups `(auth)` and `(app)`**: Separate layouts for authenticated/unauthenticated pages without affecting URL paths.
 - **Server Actions over API Routes**: Next.js 16 pattern for mutations — simpler, type-safe, and SSR-friendly.
 - **Server Components by default**: All pages fetch data server-side; only interactive elements (forms, dialogs, charts) use `"use client"`.
@@ -198,6 +200,8 @@ model Budget {
 - **Push schema to MongoDB**: `pnpm prisma db push` (no migration files for MongoDB)
 - **Generate client**: `pnpm prisma generate` (auto-runs after `db push`)
 - **Seed data**: `pnpm prisma db seed` (configured in `package.json`)
+- **Start local MongoDB**: `docker compose -f docker/docker-compose.yml up -d`
+- **Generate keyFile** (first time): `cd docker && openssl rand -base64 756 > mongo-keyfile && chmod 400 mongo-keyfile`
 
 ### Data Access Security
 
@@ -249,6 +253,8 @@ home-wealth/
 │   └── fonts/
 ├── components/
 │   ├── ui/                        # shadcn/ui components
+│   ├── login-form.tsx             # Login form component
+│   ├── signup-form.tsx            # Signup form component
 │   ├── app-sidebar.tsx            # Navigation sidebar
 │   ├── header.tsx                 # Top bar
 │   ├── dashboard/
@@ -278,8 +284,12 @@ home-wealth/
 ├── constants/                     # App constants
 ├── docs/
 │   └── implementation-plan.md     # This file
-├── auth.ts                        # Auth.js configuration
+├── docker/
+│   ├── docker-compose.yml         # Local MongoDB (mongo:7, replica set, port 27018)
+│   └── mongo-keyfile              # Replica set auth key (gitignored)
+├── auth.ts                        # Auth.js configuration + authorized callback
 ├── proxy.ts                       # Next.js 16 auth proxy (session middleware)
+├── prisma.config.ts               # Prisma config (dotenv loading)
 └── ...config files
 ```
 
@@ -287,28 +297,36 @@ home-wealth/
 
 ## Implementation Phases
 
-### Phase 1: Prisma, MongoDB & Auth.js Setup
+### Phase 1: Prisma, MongoDB & Auth.js Setup ✅
 
-- [ ] Install `prisma@6` (dev), `@prisma/client@6`, `next-auth@beta`, `@auth/prisma-adapter`
-- [ ] Initialize Prisma: `pnpm prisma init --datasource-provider mongodb --output ../generated/prisma`
-- [ ] Define all models in `prisma/schema.prisma` (Auth.js + application models)
-- [ ] Create Prisma Client singleton (`lib/prisma.ts`) with HMR-safe global caching
-- [ ] Push schema to MongoDB: `pnpm prisma db push`
-- [ ] Create Auth.js config (`auth.ts`) with Prisma adapter, Credentials provider, and Google provider
-- [ ] Create Auth.js route handler (`app/api/auth/[...nextauth]/route.ts`)
-- [ ] Create Next.js 16 proxy file (`proxy.ts`) for session middleware
-- [ ] Create `.env.local.example` with required env vars (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); update `.gitignore`
-- [ ] Add `generated/` to `.gitignore`
-- [ ] Create shared TypeScript types in `types/index.ts`
+- [x] Install `prisma@6` (dev), `@prisma/client@6`, `next-auth@beta`, `@auth/prisma-adapter`, `bcryptjs`
+- [x] Initialize Prisma: `pnpm prisma init --datasource-provider mongodb --output ../generated/prisma`
+- [x] Define all models in `prisma/schema.prisma` (Auth.js + application models)
+- [x] Create Prisma Client singleton (`lib/prisma.ts`) with HMR-safe global caching
+- [x] Set up Docker MongoDB with replica set for local development (`docker/docker-compose.yml`, port 27018)
+- [x] Push schema to MongoDB: `pnpm prisma db push` (9 collections, 11 indexes)
+- [x] Create Auth.js config (`auth.ts`) with Prisma adapter and Credentials provider
+- [x] Create Auth.js route handler (`app/api/auth/[...nextauth]/route.ts`)
+- [x] Create Next.js 16 proxy file (`proxy.ts`) for session middleware
+- [x] Create `.env.local.example` with required env vars; update `.gitignore`
+- [x] Add `generated/` to `.gitignore`
+- [x] Create shared TypeScript types in `types/index.ts`
+- [x] Verify `pnpm lint` and `pnpm build` pass clean
 
-### Phase 2: Authentication
+### Phase 2: Authentication ✅
 
-- [ ] Create `(auth)` route group layout (centered card)
-- [ ] Build login page with email/password form + Google sign-in button
-- [ ] Build sign-up page (creates user + family + member records)
-- [ ] Implement Credentials provider `authorize` function (bcrypt password verification)
-- [ ] Create sign-out Server Action using Auth.js `signOut`
-- [ ] Protect `(app)` routes using `auth()` session check in layout
+- [x] Create `(auth)` route group layout (centered card)
+- [x] Build login page with email/password form (shadcn login-01 block)
+- [x] Build sign-up page with name/email/password/confirm fields (shadcn signup-01 block)
+- [x] Implement Credentials provider `authorize` function (bcrypt password verification)
+- [x] Create signup Server Action (creates user + family + member records, auto sign-in)
+- [x] Create login Server Action with `useActionState` for pending/error states
+- [x] Protect routes via `authorized` callback in proxy (no page-level auth checks)
+- [x] Skip static assets, `_next`, and `api/auth` paths from auth checks
+- [x] Redirect authenticated users away from `/login` and `/signup` to `/dashboard`
+- [x] Redirect unauthenticated users to `/login` for protected routes
+- [x] Home page (`/`) redirects to `/dashboard` (proxy handles auth gate)
+- [x] Install shadcn/ui components (button, card, input, label, field, separator)
 
 ### Phase 3: App Shell & Layout
 
@@ -375,7 +393,7 @@ home-wealth/
 
 | Feature                  | Description                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------- |
-| **User Authentication**  | Email/password + Google OAuth sign-up and login via Auth.js (NextAuth.js v5)  |
+| **User Authentication**  | Email/password sign-up and login via Auth.js (NextAuth.js v5)                 |
 | **Family Management**    | Create a family, invite members, assign roles (admin/member)                 |
 | **Transaction Tracking** | Add income and expense entries with date, amount, category, description      |
 | **Categories**           | Create and manage custom income/expense categories with icons and colors     |
@@ -389,9 +407,9 @@ home-wealth/
 
 ## Verification Checklist
 
-- [ ] `pnpm lint` passes with no errors
-- [ ] `pnpm build` completes successfully with no type errors
-- [ ] Auth flow works: sign up → login → logout (Credentials + Google)
+- [x] `pnpm lint` passes with no errors
+- [x] `pnpm build` completes successfully with no type errors
+- [x] Auth flow works: sign up → login → logout (Credentials)
 - [ ] Family member can create transactions
 - [ ] Dashboard displays correct totals and charts
 - [ ] Categories CRUD works
