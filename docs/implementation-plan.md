@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-featured family money tracking web application. Family members can input their income and expenses to keep track of the family balance. Built with Next.js 16 (SSR), Supabase (DB + Auth), and shadcn/ui.
+A full-featured family money tracking web application. Family members can input their income and expenses to keep track of the family balance. Built with Next.js 16 (SSR), MongoDB Atlas (DB), Auth.js (Authentication), and shadcn/ui.
 
 **Target Users**: Families who want to collaboratively track finances.
 
@@ -20,8 +20,9 @@ A full-featured family money tracking web application. Family members can input 
 | Styling         | Tailwind CSS v4                                |
 | UI Components   | shadcn/ui (Radix UI + Tailwind CSS)            |
 | Icons           | Lucide React                                   |
-| Database        | Supabase (PostgreSQL)                          |
-| Authentication  | Supabase Auth                                  |
+| Database        | MongoDB Atlas                                  |
+| Authentication  | Auth.js (NextAuth.js v5)                       |
+| ODM             | Mongoose                                       |
 | Charts          | Recharts (via shadcn/ui Chart)                 |
 | Package Manager | pnpm                                           |
 
@@ -29,80 +30,120 @@ A full-featured family money tracking web application. Family members can input 
 
 ## Architecture Decisions
 
-- **Supabase over self-hosted DB**: Managed PostgreSQL with built-in auth, Row Level Security (RLS), and a free tier — ideal for a family app on Vercel.
+- **MongoDB Atlas**: Managed NoSQL database with low latency, flexible schema, and a generous free tier — ideal for a family app deployed on Vercel.
+- **Auth.js (NextAuth.js v5)**: Supports multiple authentication strategies (Credentials + Google OAuth) with a dedicated MongoDB adapter. Handles session management, CSRF protection, and JWT out of the box.
+- **Mongoose ODM**: Provides schema validation, middleware hooks, and type-safe queries for MongoDB — better DX than raw MongoDB driver for application data.
 - **Route groups `(auth)` and `(app)`**: Separate layouts for authenticated/unauthenticated pages without affecting URL paths.
 - **Server Actions over API Routes**: Next.js 16 pattern for mutations — simpler, type-safe, and SSR-friendly.
 - **Server Components by default**: All pages fetch data server-side; only interactive elements (forms, dialogs, charts) use `"use client"`.
 - **shadcn Chart (Recharts)**: Already supported by shadcn/ui with theme integration — no extra charting library needed.
-- **SQL migrations in Supabase dashboard**: Keep SQL scripts documented in `docs/sql/` for reproducibility.
+- **Two MongoDB connections**: Auth.js uses the native `mongodb` driver (via `@auth/mongodb-adapter`) for session/user data; application data uses Mongoose for schema validation and richer queries.
 
 ---
 
 ## Database Schema
 
-### Tables
+### Auth Collections (managed by Auth.js MongoDB Adapter)
+
+Auth.js automatically creates and manages these collections:
+
+- **`users`** — User accounts (id, name, email, emailVerified, image)
+- **`accounts`** — OAuth accounts linked to users (provider, providerAccountId, etc.)
+- **`sessions`** — Active sessions (sessionToken, userId, expires)
+- **`verification_tokens`** — Email verification tokens
+
+> These collections are fully managed by `@auth/mongodb-adapter`. Do not modify their schema directly.
+
+### Application Collections (managed by Mongoose)
 
 #### `families`
 
-| Column     | Type        | Notes                    |
-| ---------- | ----------- | ------------------------ |
-| id         | uuid        | Primary key, default gen |
-| name       | text        | Family name              |
-| created_at | timestamptz | Default now()            |
+```typescript
+{
+  _id: ObjectId,
+  name: string,              // Family name
+  createdAt: Date,           // Auto-managed by Mongoose timestamps
+  updatedAt: Date
+}
+```
 
 #### `family_members`
 
-| Column       | Type        | Notes                |
-| ------------ | ----------- | -------------------- |
-| id           | uuid        | Primary key          |
-| family_id    | uuid        | FK → families.id     |
-| user_id      | uuid        | FK → auth.users.id   |
-| role         | text        | 'admin' or 'member'  |
-| display_name | text        | Shown in the app     |
-| created_at   | timestamptz | Default now()        |
+```typescript
+{
+  _id: ObjectId,
+  familyId: ObjectId,        // Ref → families
+  userId: ObjectId,          // Ref → users (Auth.js)
+  role: 'admin' | 'member',
+  displayName: string,       // Shown in the app
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Indexes**: `{ familyId: 1, userId: 1 }` (unique compound)
 
 #### `categories`
 
-| Column     | Type        | Notes                 |
-| ---------- | ----------- | --------------------- |
-| id         | uuid        | Primary key           |
-| family_id  | uuid        | FK → families.id      |
-| name       | text        | e.g., "Food", "Salary"|
-| type       | text        | 'income' or 'expense' |
-| icon       | text        | Lucide icon name      |
-| color      | text        | Hex color for charts  |
-| is_default | boolean     | Seed categories       |
-| created_at | timestamptz | Default now()         |
+```typescript
+{
+  _id: ObjectId,
+  familyId: ObjectId,        // Ref → families
+  name: string,              // e.g., "Food", "Salary"
+  type: 'income' | 'expense',
+  icon: string,              // Lucide icon name
+  color: string,             // Hex color for charts
+  isDefault: boolean,        // Seed categories
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Indexes**: `{ familyId: 1, type: 1 }`
 
 #### `transactions`
 
-| Column      | Type        | Notes                    |
-| ----------- | ----------- | ------------------------ |
-| id          | uuid        | Primary key              |
-| family_id   | uuid        | FK → families.id         |
-| member_id   | uuid        | FK → family_members.id   |
-| category_id | uuid        | FK → categories.id       |
-| type        | text        | 'income' or 'expense'    |
-| amount      | numeric     | Always positive          |
-| description | text        | Optional note            |
-| date        | date        | Transaction date         |
-| created_at  | timestamptz | Default now()            |
-| updated_at  | timestamptz | Default now()            |
+```typescript
+{
+  _id: ObjectId,
+  familyId: ObjectId,        // Ref → families
+  memberId: ObjectId,        // Ref → family_members
+  categoryId: ObjectId,      // Ref → categories
+  type: 'income' | 'expense',
+  amount: number,            // Always positive (Decimal128 for precision)
+  description?: string,      // Optional note
+  date: Date,                // Transaction date
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Indexes**: `{ familyId: 1, date: -1 }`, `{ familyId: 1, categoryId: 1 }`, `{ familyId: 1, memberId: 1 }`
 
 #### `budgets`
 
-| Column      | Type        | Notes                    |
-| ----------- | ----------- | ------------------------ |
-| id          | uuid        | Primary key              |
-| family_id   | uuid        | FK → families.id         |
-| category_id | uuid        | FK → categories.id       |
-| amount      | numeric     | Budget limit             |
-| month       | date        | First day of the month   |
-| created_at  | timestamptz | Default now()            |
+```typescript
+{
+  _id: ObjectId,
+  familyId: ObjectId,        // Ref → families
+  categoryId: ObjectId,      // Ref → categories
+  amount: number,            // Budget limit
+  month: Date,               // First day of the month
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
-### Row Level Security (RLS)
+**Indexes**: `{ familyId: 1, month: 1 }`, `{ familyId: 1, categoryId: 1, month: 1 }` (unique compound)
 
-All tables have RLS enabled. Policies ensure users can only read/write data belonging to their family. Access is determined by checking `family_members.user_id` matches `auth.uid()`.
+### Data Access Security
+
+Since MongoDB does not have Row Level Security (RLS) like PostgreSQL, data isolation is enforced at the **application layer**:
+
+- All queries include the user's `familyId` filter derived from their authenticated session.
+- Server Actions validate that the current user belongs to the target family before any read/write.
+- Mongoose middleware can enforce `familyId` scoping on queries automatically.
+- Admin vs. member role checks are performed in Server Actions for destructive operations.
 
 ---
 
@@ -129,9 +170,10 @@ home-wealth/
 │   │   │   └── page.tsx           # Monthly budget goals
 │   │   └── members/
 │   │       └── page.tsx           # Family members management
-│   ├── auth/
-│   │   └── callback/
-│   │       └── route.ts           # Auth callback handler
+│   ├── api/
+│   │   └── auth/
+│   │       └── [...nextauth]/
+│   │           └── route.ts       # Auth.js route handler
 │   ├── actions/                   # Server Actions
 │   │   ├── auth.ts
 │   │   ├── transactions.ts
@@ -161,18 +203,22 @@ home-wealth/
 │       └── invite-form.tsx
 ├── lib/
 │   ├── utils.ts                   # cn() helper
-│   └── supabase/
-│       ├── server.ts              # Server-side Supabase client
-│       ├── client.ts              # Browser-side Supabase client
-│       └── middleware.ts          # Middleware Supabase client
+│   ├── db.ts                      # MongoDB native client (for Auth.js adapter)
+│   └── mongoose.ts                # Mongoose connection helper
+├── models/                        # Mongoose models
+│   ├── family.ts
+│   ├── family-member.ts
+│   ├── category.ts
+│   ├── transaction.ts
+│   └── budget.ts
 ├── types/
-│   └── database.ts                # Supabase generated types
+│   └── index.ts                   # Shared TypeScript types
 ├── hooks/                         # Custom React hooks
 ├── constants/                     # App constants
 ├── docs/
-│   ├── implementation-plan.md     # This file
-│   └── sql/                       # Database migration scripts
-├── middleware.ts                   # Next.js middleware (auth)
+│   └── implementation-plan.md     # This file
+├── auth.ts                        # Auth.js configuration
+├── proxy.ts                       # Next.js 16 auth proxy (session middleware)
 └── ...config files
 ```
 
@@ -180,22 +226,26 @@ home-wealth/
 
 ## Implementation Phases
 
-### Phase 1: Supabase Setup & Infrastructure
+### Phase 1: MongoDB & Auth.js Setup
 
-- [ ] Install `@supabase/supabase-js` and `@supabase/ssr`
-- [ ] Create Supabase client utilities (`lib/supabase/server.ts`, `client.ts`, `middleware.ts`)
-- [ ] Create Next.js `middleware.ts` for auth session refresh
-- [ ] Create `.env.local.example` with Supabase env vars; update `.gitignore`
-- [ ] Write database schema SQL (save in `docs/sql/`)
-- [ ] Create TypeScript types in `types/database.ts`
+- [ ] Install `mongodb`, `mongoose`, `next-auth@beta`, `@auth/mongodb-adapter`
+- [ ] Create MongoDB native client (`lib/db.ts`) for Auth.js adapter (with HMR-safe global caching)
+- [ ] Create Mongoose connection helper (`lib/mongoose.ts`) for application data
+- [ ] Create Auth.js config (`auth.ts`) with MongoDB adapter, Credentials provider, and Google provider
+- [ ] Create Auth.js route handler (`app/api/auth/[...nextauth]/route.ts`)
+- [ ] Create Next.js 16 proxy file (`proxy.ts`) for session middleware
+- [ ] Create `.env.local.example` with required env vars (`MONGODB_URI`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); update `.gitignore`
+- [ ] Create Mongoose models in `models/` directory
+- [ ] Create shared TypeScript types in `types/index.ts`
 
 ### Phase 2: Authentication
 
 - [ ] Create `(auth)` route group layout (centered card)
-- [ ] Build login page with email/password form
+- [ ] Build login page with email/password form + Google sign-in button
 - [ ] Build sign-up page (creates user + family + member records)
-- [ ] Create auth callback route handler
-- [ ] Create logout Server Action
+- [ ] Implement Credentials provider `authorize` function (bcrypt password verification)
+- [ ] Create sign-out Server Action using Auth.js `signOut`
+- [ ] Protect `(app)` routes using `auth()` session check in layout
 
 ### Phase 3: App Shell & Layout
 
@@ -225,7 +275,7 @@ home-wealth/
 - [ ] Build categories page (grid/list view)
 - [ ] Build category form dialog (name, type, icon, color)
 - [ ] Create category Server Actions (CRUD)
-- [ ] Write SQL to seed default categories
+- [ ] Write seed script for default categories (`scripts/seed.ts`)
 
 ### Phase 7: Family Members Management
 
@@ -260,17 +310,17 @@ home-wealth/
 
 ## MVP Features Summary
 
-| Feature                  | Description                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| **User Authentication**  | Email/password sign-up and login via Supabase Auth                       |
-| **Family Management**    | Create a family, invite members, assign roles (admin/member)             |
-| **Transaction Tracking** | Add income and expense entries with date, amount, category, description  |
-| **Categories**           | Create and manage custom income/expense categories with icons and colors |
-| **Dashboard**            | Balance overview, monthly trends, category breakdown, recent activity    |
-| **Budget Goals**         | Set monthly spending limits per category with progress tracking          |
-| **Transaction History**  | Searchable, filterable, paginated list of all transactions               |
-| **Dark Mode**            | Toggle between light and dark themes                                     |
-| **Responsive Design**    | Works on desktop and mobile devices                                      |
+| Feature                  | Description                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| **User Authentication**  | Email/password + Google OAuth sign-up and login via Auth.js (NextAuth.js v5)  |
+| **Family Management**    | Create a family, invite members, assign roles (admin/member)                 |
+| **Transaction Tracking** | Add income and expense entries with date, amount, category, description      |
+| **Categories**           | Create and manage custom income/expense categories with icons and colors     |
+| **Dashboard**            | Balance overview, monthly trends, category breakdown, recent activity        |
+| **Budget Goals**         | Set monthly spending limits per category with progress tracking              |
+| **Transaction History**  | Searchable, filterable, paginated list of all transactions                   |
+| **Dark Mode**            | Toggle between light and dark themes                                         |
+| **Responsive Design**    | Works on desktop and mobile devices                                          |
 
 ---
 
@@ -278,12 +328,12 @@ home-wealth/
 
 - [ ] `pnpm lint` passes with no errors
 - [ ] `pnpm build` completes successfully with no type errors
-- [ ] Auth flow works: sign up → login → logout
+- [ ] Auth flow works: sign up → login → logout (Credentials + Google)
 - [ ] Family member can create transactions
 - [ ] Dashboard displays correct totals and charts
 - [ ] Categories CRUD works
 - [ ] Budget progress calculates correctly
-- [ ] RLS: User A cannot see User B's family data
+- [ ] Data isolation: User A cannot see User B's family data (enforced by familyId scoping)
 - [ ] Responsive layout works on mobile viewport
 - [ ] Dark mode toggle works correctly
 

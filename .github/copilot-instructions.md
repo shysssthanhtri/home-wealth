@@ -12,6 +12,9 @@ This is a personal finance management application built with Next.js 16, React 1
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
 - **Icons**: Lucide React
+- **Database**: MongoDB Atlas
+- **ODM**: Mongoose
+- **Authentication**: Auth.js (NextAuth.js v5) with Credentials + Google OAuth
 - **Package Manager**: pnpm
 
 ## Project Structure
@@ -22,18 +25,25 @@ home-wealth/
 │   ├── layout.tsx           # Root layout with fonts and global styles
 │   ├── page.tsx             # Home page
 │   ├── globals.css          # Global styles and Tailwind directives
-│   └── fonts/               # Local font configurations
-│       └── index.ts         # Geist Sans & Geist Mono font exports
+│   ├── fonts/               # Local font configurations
+│   │   └── index.ts         # Geist Sans & Geist Mono font exports
+│   └── api/auth/            # Auth.js route handler
 ├── components/              # React components
 │   └── ui/                 # shadcn/ui components (auto-generated)
 ├── lib/                     # Utility functions
-│   └── utils.ts            # cn() helper for class merging
+│   ├── utils.ts            # cn() helper for class merging
+│   ├── db.ts               # MongoDB native client (for Auth.js adapter)
+│   └── mongoose.ts         # Mongoose connection helper
+├── models/                  # Mongoose models
+├── types/                   # Shared TypeScript types
 ├── .github/                 # GitHub configurations
 │   └── copilot-instructions.md
 ├── .husky/                  # Git hooks
 │   ├── pre-commit          # Runs lint-staged
 │   └── commit-msg          # Runs commitlint
 ├── public/                  # Static assets
+├── auth.ts                 # Auth.js configuration
+├── proxy.ts                # Next.js 16 auth session proxy
 ├── components.json         # shadcn/ui configuration
 ├── tailwind.config.ts      # Tailwind CSS configuration
 ├── *.config.*              # Other configuration files
