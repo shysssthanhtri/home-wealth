@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth.js Models (managed by @auth/prisma-adapter) ───
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String? // Hashed password for Credentials provider
+  accounts      Account[]
+  sessions      Session[]
+  members       FamilyMember[]
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Application Models ───
+
+model Family {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      FamilyMember[]
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model FamilyMember {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId    String   @db.ObjectId
+  userId      String   @db.ObjectId
+  role        String // 'admin' | 'member'
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([familyId, userId])
+}
+
+model Category {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId  String   @db.ObjectId
+  name      String
+  type      String // 'income' | 'expense'
+  icon      String // Lucide icon name
+  color     String // Hex color for charts
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@index([familyId, type])
+}
+
+model Transaction {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId    String   @db.ObjectId
+  memberId    String   @db.ObjectId
+  categoryId  String   @db.ObjectId
+  type        String // 'income' | 'expense'
+  amount      Float // Always positive
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family   Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  member   FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, date(sort: Desc)])
+  @@index([familyId, categoryId])
+  @@index([familyId, memberId])
+}
+
+model Budget {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  familyId   String   @db.ObjectId
+  categoryId String   @db.ObjectId
+  amount     Float
+  month      DateTime // First day of the month
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  family   Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, categoryId, month])
+  @@index([familyId, month])
+}
