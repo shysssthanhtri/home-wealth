@@ -5,6 +5,9 @@ import Credentials from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/prisma";
 
+const authRoutes = ["/login", "/signup"];
+const publicRoutes = [...authRoutes];
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -43,6 +46,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    authorized({ auth: session, request: { nextUrl } }) {
+      const isLoggedIn = !!session?.user;
+      const pathname = nextUrl.pathname;
+
+      // Skip static assets and API routes
+      if (
+        pathname.startsWith("/api/auth") ||
+        pathname.startsWith("/_next") ||
+        /\.(?:css|js|json|ico|png|jpg|jpeg|gif|svg|webp|woff2?)$/.test(pathname)
+      ) {
+        return true;
+      }
+
+      // Authenticated user visiting auth pages → redirect to dashboard
+      if (isLoggedIn && authRoutes.includes(pathname)) {
+        return Response.redirect(new URL("/dashboard", nextUrl));
+      }
+
+      // Unauthenticated user visiting protected pages → redirect to login
+      if (!isLoggedIn && !publicRoutes.includes(pathname)) {
+        return Response.redirect(new URL("/login", nextUrl));
+      }
+
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
