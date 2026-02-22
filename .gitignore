@@ -45,3 +45,6 @@ next-env.d.ts
 generated/
 
 /generated/prisma
+
+# docker
+docker/mongo-keyfile
